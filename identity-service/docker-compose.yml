@@ -1,0 +1,52 @@
+version: "3.4"
+services:
+  postgres-ais:
+    image: postgres:13.7
+    environment:
+      POSTGRES_PASSWORD: alfresco
+      POSTGRES_USER: alfresco
+      POSTGRES_DB: keycloak
+    command: postgres -c max_connections=300 -c log_min_messages=LOG
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  auth:
+    image: alfresco/alfresco-identity-service:1.7.0
+    environment:
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+      DB_VENDOR: postgres
+      DB_ADDR: "postgres-ais:5432"
+      DB_DATABASE: keycloak
+      DB_USER: alfresco
+      DB_PASSWORD: alfresco
+      JAVA_OPTS: "-Djboss.socket.binding.port-offset=808 -Djava.net.preferIPv4Stack=true -Djava.net.preferIPv4Addresses=true"
+    ports:
+      - 8280:8888
+    depends_on:
+      - postgres-ais
+    links:
+      - postgres-ais
+
+  ldap:
+    image: docker.io/bitnami/openldap:2.6
+    restart: always
+    ports:
+      - 10389:1389
+    environment:
+      LDAP_ROOT: dc=example,dc=com
+      LDAP_ADMIN_USERNAME: admin
+      LDAP_ADMIN_PASSWORD: secret
+      LDAP_CUSTOM_LDIF_DIR: /ldifs
+    volumes:
+      #- ./data/ldap/data:/bitnami/openldap/data
+      - ./ldap/bootstrap:/ldifs
+
+volumes:
+  pgdata:
+
+networks:
+  default:
+    name: keycloak_network

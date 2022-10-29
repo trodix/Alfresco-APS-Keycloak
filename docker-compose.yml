@@ -1,0 +1,53 @@
+version: "3.4"
+services:
+
+  postgres-aps:
+    image: postgres:13.7
+    environment:
+      POSTGRES_DB: activiti
+      POSTGRES_USER: alfresco
+      POSTGRES_PASSWORD: alfresco
+    command: postgres -c max_connections=300 -c log_min_messages=LOG
+    ports:
+      - 5433:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # - ./db:/docker-entrypoint-initdb.d
+
+  process:
+    image: alfresco/process-services:2.2.0
+    # environment:
+    #   ACTIVITI_DATASOURCE_USERNAME: alfresco
+    #   ACTIVITI_DATASOURCE_PASSWORD: alfresco
+    #   ACTIVITI_DATASOURCE_DRIVER: org.postgresql.Driver
+    #   ACTIVITI_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+    #   ACTIVITI_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/activiti?characterEncoding=UTF-8'
+    #   ACTIVITI_CSRF_DISABLED: 'true'
+    #   ACTIVITI_CORS_ENABLED: 'true'
+    #   ACTIVITI_ES_SERVER_TYPE: client
+    #   ACTIVITI_ES_DISCOVERY_HOSTS: elasticsearch:9300
+    #   ACTIVITI_ES_CLUSTER_NAME: elasticsearch
+    volumes:
+      - ./aps/license:/home/alfresco/.activiti/enterprise-license/:ro
+      - ./aps/activiti-app.properties:/usr/local/tomcat/lib/activiti-app.properties
+      - ./aps/activiti-ldap.properties:/usr/local/tomcat/lib/activiti-ldap.properties
+      - ./aps/activiti-identity-service.properties:/usr/local/tomcat/lib/activiti-identity-service.properties
+      - ./data/aps:/usr/local/data/
+    ports:
+      - 8380:8080
+    links:
+      - elasticsearch:elasticsearch
+      - postgres-aps:postgres-aps
+    depends_on:
+      - elasticsearch
+      - postgres-aps
+
+  elasticsearch:
+    image: elasticsearch:1.7.3
+
+volumes:
+  pgdata:
+
+networks:
+  default:
+    name: aps_network
